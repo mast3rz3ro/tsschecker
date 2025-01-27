@@ -31,9 +31,9 @@ extern "C" {
 
 #include <stdio.h>
 #include <plist/plist.h>
+#include <libtatsu/tss.h>
 
 #include "jssy.h"
-#include "tss.h"
 #include "debug.h"
     
 extern int dbglog;
@@ -44,6 +44,7 @@ extern int update_install;
 extern int erase_install;
 extern int save_bplist;
 extern const char *shshSavePath;
+extern int print_tss_request;
 
 struct bbdevice{
     const char *deviceModel;
@@ -64,13 +65,16 @@ typedef struct{
     char *deviceBoard;
     char *apnonce;
     char *sepnonce;
+    char *cryptexnonce;
     uint64_t ecid;
     uint64_t bbgcid;
     size_t parsedApnonceLen;
     size_t parsedSepnonceLen;
+    size_t parsedCryptexnonceLen;
     uint8_t *bbsnum;
     size_t bbsnumSize;
     char generator[19];
+    char cryptexseed[36];
     union{
         t_installType installType : 2;
         union{

@@ -23,7 +23,6 @@
 #include "debug.h"
 #include "download.h"
 #include "common.h"
-#include "tss.h"
 
 #include <libfragmentzip/libfragmentzip.h>
 #include <libirecovery.h>
@@ -128,23 +127,53 @@ int erase_install = 0;
 int save_bplist = 0;
 const char *shshSavePath = "."DIRECTORY_DELIMITER_STR;
 
-// iPhone & iPod touch (1st generations) do not use SHSH or APTicket.
+// iPhone & iPod touch 1st generation models do not use SHSH or APTicket.
 static struct bbdevice bbdevices[] = {
     // Apple Silicon Macs
-    {"ADP3,2", 0, 0},         // DTK (2020)
-    {"iMac21,1", 0, 0},       // iMac (24-inch, M1, 2021)
-    {"iMac21,2", 0, 0},       // iMac (24-inch, M1, 2021)
-    {"Macmini9,1", 0, 0},     // Mac Mini (M1, 2020)
-    {"MacBookAir10,1", 0, 0}, // MacBook Air (M1, 2020)
-    {"MacBookPro17,1", 0, 0}, // MacBook Pro (13-inch, M1, 2020)
-    {"MacBookPro18,1", 0, 0}, // MacBook Pro (M1 Pro, 16-inch, 2021)
-    {"MacBookPro18,2", 0, 0}, // MacBook Pro (M1 Max, 16-inch, 2021)
-    {"MacBookPro18,3", 0, 0}, // MacBook Pro (M1 Pro, 14-inch, 2021)
-    {"MacBookPro18,4", 0, 0}, // MacBook Pro (M1 Max, 14-inch, 2021)
-    {"Mac13,1", 0, 0},        // Mac Studio (M1 Max, 2022)
-    {"Mac13,2", 0, 0},        // Mac Studio (M1 Ultra, 2022)
-    {"Mac14,2", 0, 0},        // MacBook Air (M2, 2022)
-    {"Mac14,7", 0, 0},        // MacBook Pro (13-inch, M2, 2022)
+    {"ADP3,2", 0, 0},          // DTK (2020)
+    {"iMac21,1", 0, 0},        // iMac (24-inch, M1, 2021)
+    {"iMac21,2", 0, 0},        // iMac (24-inch, M1, 2021)
+    {"Macmini9,1", 0, 0},      // Mac Mini (M1, 2020)
+    {"MacBookAir10,1", 0, 0},  // MacBook Air (M1, 2020)
+    {"MacBookPro17,1", 0, 0},  // MacBook Pro (13-inch, M1, 2020)
+    {"MacBookPro18,1", 0, 0},  // MacBook Pro (M1 Pro, 16-inch, 2021)
+    {"MacBookPro18,2", 0, 0},  // MacBook Pro (M1 Max, 16-inch, 2021)
+    {"MacBookPro18,3", 0, 0},  // MacBook Pro (M1 Pro, 14-inch, 2021)
+    {"MacBookPro18,4", 0, 0},  // MacBook Pro (M1 Max, 14-inch, 2021)
+    {"Mac13,1", 0, 0},         // Mac Studio (M1 Max, 2022)
+    {"Mac13,2", 0, 0},         // Mac Studio (M1 Ultra, 2022)
+    {"Mac14,2", 0, 0},         // MacBook Air (M2, 2022)
+    {"Mac14,7", 0, 0},         // MacBook Pro (13-inch, M2, 2022)
+    {"Mac14,3", 0, 0},         // Mac mini (M2, 2023)
+    {"Mac14,5", 0, 0},         // MacBook Pro (14-inch, M2 Max, 2023)
+    {"Mac14,6", 0, 0},         // MacBook Pro (16-inch, M2 Max, 2023)
+    {"Mac14,8", 0, 0},         // Mac Pro (M2 Ultra, 2023)
+    {"Mac14,9", 0, 0},         // MacBook Pro (14-inch, M2 Pro, 2023)
+    {"Mac14,10", 0, 0},        // MacBook Pro (16-inch, M2 Pro, 2023)
+    {"Mac14,12", 0, 0},        // Mac mini (M2 Pro, 2023)
+    {"Mac14,13", 0, 0},        // Mac Studio (M2 Pro, 2023)
+    {"Mac14,14", 0, 0},        // Mac Studio (M2 Ultra, 2023)
+    {"Mac14,15", 0, 0},        // MacBook Air (15-inch, M2, 2023)
+    {"Mac15,3", 0, 0},         // MacBook Pro (14-inch, M3, Nov 2023)
+    {"Mac15,4", 0, 0},         // iMac 24-inch (M3, Two Ports, 2023)
+    {"Mac15,5", 0, 0},         // iMac 24-inch (M3, Four Ports, 2023)
+    {"Mac15,6", 0, 0},         // MacBook Pro (14-inch, M3 Pro, Nov 2023)
+    {"Mac15,7", 0, 0},         // MacBook Pro (16-inch, M3 Pro, Nov 2023)
+    {"Mac15,8", 0, 0},         // MacBook Pro (14-inch, M3 Max, Nov 2023)
+    {"Mac15,9", 0, 0},         // MacBook Pro (16-inch, M3 Max, Nov 2023)
+    {"Mac15,10", 0, 0},        // MacBook Pro (14-inch, M3 Max, Nov 2023)
+    {"Mac15,11", 0, 0},        // MacBook Pro (16-inch, M3 Max, Nov 2023)
+    {"Mac15,12", 0, 0},        // MacBook Air (13-inch, M3, 2024)
+    {"Mac15,13", 0, 0},        // MacBook Air (15-inch, M3, 2024)
+    {"Mac16,1", 0, 0},         // MacBook Pro (14-inch, M4, Nov 2024)
+    {"Mac16,2", 0, 0},         // iMac 24-inch (M4, Two Ports, 2024)
+    {"Mac16,3", 0, 0},         // iMac 24-inch (M4, Four Ports, 2024)
+    {"Mac16,5", 0, 0},         // MacBook Pro (16-inch, M4 Pro, Nov 2024)
+    {"Mac16,6", 0, 0},         // MacBook Pro (14-inch, M4 Pro, Nov 2024)
+    {"Mac16,7", 0, 0},         // MacBook Pro (16-inch, M4 Pro, Nov 2024)
+    {"Mac16,8", 0, 0},         // MacBook Pro (14-inch, M4 Pro, Nov 2024)
+    {"Mac16,10", 0, 0},        // Mac mini (M4, 2024)
+    {"Mac16,11", 0, 0},        // Mac mini (M4 Pro, 2024)
 
     // Apple Displays
     {"AppleDisplay2,1", 0, 0}, // Studio Display
@@ -228,61 +257,71 @@ static struct bbdevice bbdevices[] = {
     {"iPhone15,5", 3452763205, 4},   // iPhone 15 Plus
     {"iPhone16,1", 3452763205, 4},   // iPhone 15 Pro
     {"iPhone16,2", 3452763205, 4},   // iPhone 15 Pro Max
+    {"iPhone17,1", 1652214800, 4},   // iPhone 16 Pro
+    {"iPhone17,2", 1652214800, 4},   // iPhone 16 Pro Max
+    {"iPhone17,3", 1652214800, 4},   // iPhone 16
+    {"iPhone17,4", 1652214800, 4},   // iPhone 16 Plus
 
     // iPads
-    {"iPad1,1",  0, 0},          // iPad (1st gen)
-    {"iPad2,1",  0, 0},          // iPad 2 Wi-Fi
-    {"iPad2,2",  257, 12},       // iPad 2 GSM
-    {"iPad2,3",  257, 12},       // iPad 2 CDMA
-    {"iPad2,4",  0, 0},          // iPad 2 Wi-Fi (2012, Rev A)
-    {"iPad3,1",  0, 0},          // iPad (3rd gen, Wi-Fi)
-    {"iPad3,2",  4, 4},          // iPad (3rd gen, CDMA)
-    {"iPad3,3",  4, 4},          // iPad (3rd gen, GSM)
-    {"iPad3,4",  0, 0},          // iPad with Retina display (4th gen, Wi-Fi)
-    {"iPad3,5",  3255536192, 4}, // iPad with Retina display (4th gen, CDMA)
-    {"iPad3,6",  3255536192, 4}, // iPad with Retina display (4th gen, GSM)
-    {"iPad6,11", 0, 0},          // iPad (5th gen, 2017, Wi-Fi)
-    {"iPad6,12", 3840149528, 4}, // iPad (5th gen, 2017, Cellular)
-    {"iPad7,5",  0, 0},          // iPad (6th gen, 2018, Wi-Fi)
-    {"iPad7,6",  3840149528, 4}, // iPad (6th gen, 2018, Cellular)
-    {"iPad7,11", 0, 0},          // iPad (7th gen, 2019, Wi-Fi)
-    {"iPad7,12", 165673526, 12}, // iPad (7th gen, 2019, Cellular)
-    {"iPad11,6", 0, 0},          // iPad (8th gen, 2020, Wi-Fi)
-    {"iPad11,7", 165673526, 12}, // iPad (8th gen, 2020, Cellular)
-    {"iPad12,1", 0, 0},          // iPad (9th gen, 2021, Wi-Fi)
-    {"iPad12,2", 165673526, 12}, // iPad (9th gen, 2021, Cellular)
-    {"iPad13,18", 0, 0},         // iPad (10th gen, 2022, Wi-Fi)
-    {"iPad13,19", 495958265, 4}, // iPad (10th gen, 2022, Cellular)
+    {"iPad1,1",    0, 0},            // iPad (1st gen)
+    {"iPad2,1",    0, 0},            // iPad 2 Wi-Fi
+    {"iPad2,2",    257, 12},         // iPad 2 GSM
+    {"iPad2,3",    257, 12},         // iPad 2 CDMA
+    {"iPad2,4",    0, 0},            // iPad 2 Wi-Fi (2012, Rev A)
+    {"iPad3,1",    0, 0},            // iPad (3rd gen, Wi-Fi)
+    {"iPad3,2",    4, 4},            // iPad (3rd gen, CDMA)
+    {"iPad3,3",    4, 4},            // iPad (3rd gen, GSM)
+    {"iPad3,4",    0, 0},            // iPad with Retina display (4th gen, Wi-Fi)
+    {"iPad3,5",    3255536192, 4},   // iPad with Retina display (4th gen, CDMA)
+    {"iPad3,6",    3255536192, 4},   // iPad with Retina display (4th gen, GSM)
+    {"iPad6,11",   0, 0},            // iPad (5th gen, 2017, Wi-Fi)
+    {"iPad6,12",   3840149528, 4},   // iPad (5th gen, 2017, Cellular)
+    {"iPad7,5",    0, 0},            // iPad (6th gen, 2018, Wi-Fi)
+    {"iPad7,6",    3840149528, 4},   // iPad (6th gen, 2018, Cellular)
+    {"iPad7,11",   0, 0},            // iPad (7th gen, 2019, Wi-Fi)
+    {"iPad7,12",   165673526, 12},   // iPad (7th gen, 2019, Cellular)
+    {"iPad11,6",   0, 0},            // iPad (8th gen, 2020, Wi-Fi)
+    {"iPad11,7",   165673526, 12},   // iPad (8th gen, 2020, Cellular)
+    {"iPad12,1",   0, 0},            // iPad (9th gen, 2021, Wi-Fi)
+    {"iPad12,2",   165673526, 12},   // iPad (9th gen, 2021, Cellular)
+    {"iPad13,18",  0, 0},            // iPad (10th gen, 2022, Wi-Fi)
+    {"iPad13,19",  495958265, 4},    // iPad (10th gen, 2022, Cellular)
 
     // iPad minis
-    {"iPad2,5",  0, 0},          // iPad mini (1st gen, Wi-Fi)
-    {"iPad2,6",  3255536192, 4}, // iPad mini (1st gen, CDMA)
-    {"iPad2,7",  3255536192, 4}, // iPad mini (1st gen, GSM)
-    {"iPad4,4",  0, 0},          // iPad mini 2 (Wi-Fi)
-    {"iPad4,5",  3554301762, 4}, // iPad mini 2 (Cellular)
-    {"iPad4,6",  3554301762, 4}, // iPad mini 2 (Cellular, China)
-    {"iPad4,7",  0, 0},          // iPad mini 3 (Wi-Fi)
-    {"iPad4,8",  3554301762, 4}, // iPad mini 3 (Cellular)
-    {"iPad4,9",  3554301762, 4}, // iPad mini 3 (Cellular, China)
-    {"iPad5,1",  0, 0},          // iPad mini 4 (Wi-Fi)
-    {"iPad5,2",  3840149528, 4}, // iPad mini 4 (Cellular)
-    {"iPad11,1", 0, 0},          // iPad mini (5th gen, Wi-Fi)
-    {"iPad11,2", 165673526, 12}, // iPad mini (5th gen, Cellular)
-    {"iPad14,1", 0, 0},          // iPad mini (6th gen, Wi-Fi)
-    {"iPad14,2", 495958265, 4},  // iPad mini (6th gen, Cellular)
+    {"iPad2,5",    0, 0},            // iPad mini (1st gen, Wi-Fi)
+    {"iPad2,6",    3255536192, 4},   // iPad mini (1st gen, CDMA)
+    {"iPad2,7",    3255536192, 4},   // iPad mini (1st gen, GSM)
+    {"iPad4,4",    0, 0},            // iPad mini 2 (Wi-Fi)
+    {"iPad4,5",    3554301762, 4},   // iPad mini 2 (Cellular)
+    {"iPad4,6",    3554301762, 4},   // iPad mini 2 (Cellular, China)
+    {"iPad4,7",    0, 0},            // iPad mini 3 (Wi-Fi)
+    {"iPad4,8",    3554301762, 4},   // iPad mini 3 (Cellular)
+    {"iPad4,9",    3554301762, 4},   // iPad mini 3 (Cellular, China)
+    {"iPad5,1",    0, 0},            // iPad mini 4 (Wi-Fi)
+    {"iPad5,2",    3840149528, 4},   // iPad mini 4 (Cellular)
+    {"iPad11,1",   0, 0},            // iPad mini (5th gen, Wi-Fi)
+    {"iPad11,2",   165673526, 12},   // iPad mini (5th gen, Cellular)
+    {"iPad14,1",   0, 0},            // iPad mini (6th gen, Wi-Fi)
+    {"iPad14,2",   495958265, 4},    // iPad mini (6th gen, Cellular)
+    {"iPad16,1",   0, 0},            // iPad mini (A17 Pro, Wi-Fi)
+    {"iPad16,2",   3452763205, 4},   // iPad mini (A17 Pro, Cellular)
 
     // iPad Airs
-    {"iPad4,1",  0, 0},          // iPad Air (Wi-Fi)
-    {"iPad4,2",  3554301762, 4}, // iPad Air (Cellular)
-    {"iPad4,3",  3554301762, 4}, // iPad Air (Cellular, China)
-    {"iPad5,3",  0, 0},          // iPad Air 2 (Wi-Fi)
-    {"iPad5,4",  3840149528, 4}, // iPad Air 2 (Cellular)
-    {"iPad11,3", 0, 0},          // iPad Air (3rd gen, Wi-Fi)
-    {"iPad11,4", 165673526, 12}, // iPad Air (3rd gen, Cellular)
-    {"iPad13,1", 0, 0},          // iPad Air (4th gen, Wi-Fi)
-    {"iPad13,2", 524245983, 12}, // iPad Air (4th gen, Cellular)
-    {"iPad13,16", 0, 0},         // iPad Air (5th gen, Wi-Fi)
-    {"iPad13,17", 495958265, 4}, // iPad Air (5th gen, Cellular)
+    {"iPad4,1",    0, 0},            // iPad Air (Wi-Fi)
+    {"iPad4,2",    3554301762, 4},   // iPad Air (Cellular)
+    {"iPad4,3",    3554301762, 4},   // iPad Air (Cellular, China)
+    {"iPad5,3",    0, 0},            // iPad Air 2 (Wi-Fi)
+    {"iPad5,4",    3840149528, 4},   // iPad Air 2 (Cellular)
+    {"iPad11,3",   0, 0},            // iPad Air (3rd gen, Wi-Fi)
+    {"iPad11,4",   165673526, 12},   // iPad Air (3rd gen, Cellular)
+    {"iPad13,1",   0, 0},            // iPad Air (4th gen, Wi-Fi)
+    {"iPad13,2",   524245983, 12},   // iPad Air (4th gen, Cellular)
+    {"iPad13,16",  0, 0},            // iPad Air (5th gen, Wi-Fi)
+    {"iPad13,17",  495958265, 4},    // iPad Air (5th gen, Cellular)
+    {"iPad14,8",   0, 0},            // iPad Air (11-inch, M2, Wi-Fi)
+    {"iPad14,9",   495958265, 4},    // iPad Air (11-inch, M2, Cellular)
+    {"iPad14,10",  0, 0},            // iPad Air (13-inch, M2, Wi-Fi)
+    {"iPad14,11",  495958265, 4},    // iPad Air (13-inch, M2, Cellular)
 
     // iPad Pros
     {"iPad6,3",    0, 0},            // iPad Pro (9.7-inch, Wi-Fi)
@@ -317,6 +356,10 @@ static struct bbdevice bbdevices[] = {
     {"iPad14,4",   3559316616, 4},   // iPad Pro (11-inch, 4th gen, Cellular)
     {"iPad14,5",   0, 0},            // iPad Pro (12.9-inch, 6th gen, Wi-Fi)
     {"iPad14,6",   3559316616, 4},   // iPad Pro (12.9-inch, 6th gen, Cellular)
+    {"iPad16,3",   0, 0},            // iPad Pro (11-inch, M4, Wi-Fi)
+    {"iPad16,4",   3452763205, 4},   // iPad Pro (11-inch, M4, Cellular)
+    {"iPad16,5",   0, 0},            // iPad Pro (13-inch, M4, Wi-Fi)
+    {"iPad16,6",   3452763205, 4},   // iPad Pro (13-inch, M4, Cellular)
 
     // Apple Watches
     {"Watch1,1",   0, 0},            // Apple Watch 1st gen (38mm)
@@ -363,29 +406,50 @@ static struct bbdevice bbdevices[] = {
     {"Watch7,3",   744114402, 12},   // Apple Watch Series 9 (41mm, GPS + Cellular)
     {"Watch7,4",   744114402, 12},   // Apple Watch Series 9 (45mm, GPS + Cellular)
     {"Watch7,5",   744114402, 12},   // Apple Watch Ultra 2 (49mm, GPS + Cellular)
+    {"Watch7,8",   0, 0},            // Apple Watch Series 10 (42mm, GPS)
+    {"Watch7,9",   0, 0},            // Apple Watch Series 10 (46mm, GPS)
+    {"Watch7,10",  744114402, 12},   // Apple Watch Series 10 (42mm, GPS + Cellular)
+    {"Watch7,11",  744114402, 12},   // Apple Watch Series 10 (46mm, GPS + Cellular)
 
     // HomePods
     {"AudioAccessory1,1",   0, 0},   // HomePod 1st gen
     {"AudioAccessory1,2",   0, 0},   // HomePod 1st gen (2018)
     {"AudioAccessory5,1",   0, 0},   // HomePod mini
-    
+    {"AudioAccessory6,1",   0, 0},   // HomePod 2nd gen
+
     // Apple TVs
     {"AppleTV1,1",   0, 0},  // 1st gen
     {"AppleTV2,1",   0, 0},  // 2nd gen
     {"AppleTV3,1",   0, 0},  // 3rd gen
     {"AppleTV3,2",   0, 0},  // 3rd gen (2013)
     {"AppleTV5,3",   0, 0},  // 4th gen
-    {"AppleTV6,2",   0, 0},  // 4K
+    {"AppleTV6,2",   0, 0},  // 4K 1st gen
     {"AppleTV11,1",  0, 0},  // 4K 2nd gen
     {"AppleTV14,1",  0, 0},  // 4K 3rd gen
     {NULL, 0, 0}
 };
 
+#define tsserror(a ...) if (idevicerestore_debug) printf(a)
+
+#define ECID_STRSIZE 0x20
+
+char* ecid_to_string(uint64_t ecid)
+{
+  char* ecid_string = malloc(ECID_STRSIZE);
+  memset(ecid_string, '\0', ECID_STRSIZE);
+  if (ecid == 0) {
+    tsserror("ERROR: Invalid ECID passed.\n");
+    return NULL;
+  }
+  snprintf(ecid_string, ECID_STRSIZE, FMT_qu, ecid);
+  return ecid_string;
+}
+
 inline static t_bbdevice bbdevices_get_all() {
     return bbdevices;
 }
 
-void sha1(unsigned char *buf, uint8_t bufSz, char* dest, uint8_t destSz) {
+void sha1_wrapper(unsigned char *buf, uint8_t bufSz, char* dest, uint8_t destSz) {
 #ifdef WIN32
     BCRYPT_ALG_HANDLE hAlg = NULL;
     BCRYPT_HASH_HANDLE hHash = NULL;
@@ -427,7 +491,8 @@ void sha1(unsigned char *buf, uint8_t bufSz, char* dest, uint8_t destSz) {
     SHA1(buf, bufSz, (unsigned char*)dest);
 #endif
 }
-
+#undef sha1
+#define sha1 sha1_wrapper
 void sha384(unsigned char *buf, uint8_t bufSz, char* dest, uint8_t destSz) {
 #ifdef WIN32
     BCRYPT_ALG_HANDLE hAlg = NULL;
@@ -961,6 +1026,158 @@ error:
 #undef reterror
 }
 
+
+int tss_request_add_custom_cryptex_tags(plist_t request, plist_t parameters)
+{
+  /* loop over components from build manifest */
+  plist_t manifest_node = plist_dict_get_item(parameters, "Manifest");
+  if (!manifest_node || plist_get_node_type(manifest_node) != PLIST_DICT) {
+    error("ERROR: Unable to find restore manifest\n");
+    return -1;
+  }
+
+  /* add components to request */
+  char* key = NULL;
+  plist_t manifest_entry = NULL;
+  plist_dict_iter iter = NULL;
+  plist_dict_new_iter(manifest_node, &iter);
+  while (1) {
+    free(key);
+    key = NULL;
+    plist_dict_next_item(manifest_node, iter, &key, &manifest_entry);
+    if (key == NULL)
+      break;
+    if (!manifest_entry || plist_get_node_type(manifest_entry) != PLIST_DICT) {
+      error("ERROR: Unable to fetch BuildManifest entry\n");
+      free(key);
+      return -1;
+    }
+
+    if ((strstr(key, "Cryptex") == 0)) {
+      continue;
+    }
+
+    plist_t info_dict = plist_dict_get_item(manifest_entry, "Info");
+    if (!info_dict) {
+      continue;
+    }
+
+    uint8_t trusted = plist_dict_get_bool(manifest_entry, "Trusted");
+    uint8_t supports_img4 = plist_dict_get_bool(parameters, "ApSupportsImg4");
+    if (supports_img4) {
+      if (!plist_dict_get_item(info_dict, "RestoreRequestRules") && !trusted) {
+        debug("DEBUG: %s: Skipping '%s' as it doesn't have RestoreRequestRules and is not Trusted\n", __func__, key);
+        continue;
+      }
+    }
+
+    if (plist_dict_get_bool(parameters, "_OnlyFWComponents")) {
+      if (!trusted) {
+        debug("DEBUG: %s: Skipping '%s' as it is not trusted\n", __func__, key);
+        continue;
+      }
+      if (!(plist_dict_get_bool(info_dict, "IsFirmwarePayload")
+              || plist_dict_get_bool(info_dict, "IsSecondaryFirmwarePayload")
+              || plist_dict_get_bool(info_dict, "IsFUDFirmware")
+              || plist_dict_get_bool(info_dict, "IsLoadedByiBoot")
+              || plist_dict_get_bool(info_dict, "IsEarlyAccessFirmware")
+              || plist_dict_get_bool(info_dict, "IsiBootEANFirmware")
+              || plist_dict_get_bool(info_dict, "IsiBootNonEssentialFirmware"))) {
+        debug("DEBUG: %s: Skipping '%s' as it is not a firmware payload\n", __func__, key);
+        continue;
+      }
+    }
+
+    /* skip components with IsFTAB:true */
+    //		if (plist_dict_get_bool(info_dict, "IsFTAB")) {
+    //			debug("DEBUG: %s: Skipping FTAB component '%s'\n", __func__, key);
+    //			continue;
+    //		}
+
+    /* copy this entry */
+    plist_t tss_entry = plist_copy(manifest_entry);
+
+    /* remove obsolete Info node */
+    plist_dict_remove_item(tss_entry, "Info");
+
+    /* handle RestoreRequestRules */
+//    plist_t rules = plist_access_path(manifest_entry, 2, "Info", "RestoreRequestRules");
+//    if (rules) {
+//      debug("DEBUG: Applying restore request rules for entry %s\n", key);
+//      tss_entry_apply_restore_request_rules(tss_entry, parameters, rules);
+//    } else if (supports_img4) {
+//      plist_dict_copy_bool(tss_entry, parameters, "EPRO", "ApProductionMode");
+//      plist_dict_copy_bool(tss_entry, parameters, "ESEC", "ApSecurityMode");
+//    }
+
+    /* Make sure we have a Digest key for Trusted items even if empty */
+    if (trusted && !plist_dict_get_item(manifest_entry, "Digest")) {
+      debug("DEBUG: No Digest data, using empty value for entry %s\n", key);
+      plist_dict_set_item(tss_entry, "Digest", plist_new_data(NULL, 0));
+    }
+
+    /* empty entry is not needed */
+    if (plist_dict_get_size(tss_entry) == 0) {
+      continue;
+    }
+
+    /* finally add entry to request */
+    plist_dict_set_item(request, key, tss_entry);
+  }
+  free(key);
+  free(iter);
+
+  return 0;
+}
+
+
+int tss_populate_cryptexvals(plist_t tssreq, plist_t tssparameters, t_devicevals *devVals){
+#define reterror(a...) {error(a); ret = -1; goto error;}
+    int ret = 0;
+    size_t nonceLen = 32;
+    if (devVals->parsedCryptexnonceLen != nonceLen) {
+      return error("[TSSR] parsed CryptexnonceLen != requiredCryptexnonceLen (%u != %u)\n",
+                   (unsigned int)devVals->parsedCryptexnonceLen,
+                   (unsigned int)nonceLen),
+             -1;
+    }
+    plist_t parameters = plist_copy(tssparameters);
+    if (tss_request_add_custom_cryptex_tags(tssreq, parameters) < 0) {
+        reterror("[TSSR] failed to add all cryptex tags to cryptex TSS request\n");
+    }
+    if (tss_request_add_cryptex_tags(tssreq, parameters, NULL) < 0) {
+        reterror("[TSSR] failed to add cryptex tags to cryptex TSS request\n");
+    }
+    if(!devVals || !devVals->cryptexnonce || !devVals->parsedCryptexnonceLen) {
+      reterror("[TSSR] failed to to populate cryptex TSS request, missing devVals or cryptex nonce!\n");
+    }
+    plist_dict_remove_item(tssreq, "UniqueBuildID");
+    plist_dict_set_item(tssreq, "ApSecurityDomain", plist_new_string("0x01"));
+    plist_dict_set_item(tssreq, "@Locality", plist_new_string("en_US"));
+    plist_dict_set_item(tssreq, "@BBTicket", plist_new_bool(1));
+    plist_dict_set_item(tssreq, "ApSecurityMode", plist_new_bool(1));
+    plist_dict_set_item(tssreq, "Cryptex1,ProductionMode", plist_new_bool(1));
+    plist_t chipid_node = plist_dict_get_item(tssreq, "ApChipID");
+    char *chipid_str = NULL;
+    uint64_t chipid = 0;
+    if(plist_get_node_type(chipid_node) == PLIST_STRING) {
+      plist_get_string_val(chipid_node, &chipid_str);
+      chipid = __bswap_64(strtol(chipid_str, NULL, 0));
+    } else if(plist_get_node_type(chipid_node) == PLIST_INT) {
+      plist_get_int_val(chipid_node, &chipid);
+      chipid = __bswap_64(chipid);
+    }
+    uint64_t ecid = __bswap_64(devVals->ecid);
+    plist_dict_set_item(tssreq, "ApECID", plist_new_uint(devVals->ecid));
+    uint64_t udid[2] = {chipid, ecid};
+    plist_dict_set_item(tssreq, "Cryptex1,UDID", plist_new_data((const char *)&udid, 0x10));
+    plist_dict_set_item(tssreq, "Cryptex1,Nonce", plist_new_data(devVals->cryptexnonce, devVals->parsedCryptexnonceLen));
+
+error:
+    return ret;
+#undef reterror
+}
+
 int parseHex(const char *nonce, size_t *parsedLen, char *ret, size_t *retSize){
     size_t nonceLen = strlen(nonce);
     nonceLen = nonceLen/2 + nonceLen%2; //one byte more if len is odd
@@ -1171,7 +1388,7 @@ getID0:
         //TODO: don't use .shsh2 ending and don't save generator when saving only baseband
         debug("[TSSR] User specified to request only a Baseband ticket.\n");
     }
-    
+
     if (basebandMode != kBasebandModeWithoutBaseband) {
         //TODO: verify that this being int64_t instead of uint64_t doesn't actually break something
         t_bbdevice bbinfo = getBBDeviceInfo(devVals->deviceModel);
@@ -1207,14 +1424,66 @@ error:
 #undef reterror
 }
 
+int cryptextssrequest(plist_t *tssreqret, char *buildManifest, t_devicevals *devVals){
+#define reterror(a...) {error(a); error = -1; goto error;}
+    int error = 0;
+    plist_t manifest = NULL;
+    plist_t tssparameter = plist_new_dict();
+    plist_t tssreq = tss_request_new(NULL);
+    plist_t id0 = NULL;
+    plist_from_xml(buildManifest, (unsigned)strlen(buildManifest), &manifest);
+
+getID0:
+    id0 = (devVals->deviceBoard)
+                ? getBuildidentityWithBoardconfig(manifest, devVals->deviceBoard, devVals->isUpdateInstall)
+                : getBuildidentity(manifest, devVals->deviceModel, devVals->isUpdateInstall);
+    if (!id0 && !devVals->installType){
+        warning("[TSSC] could not get BuildIdentity for installType=Erase. Using fallback installType=Update since user did not specify installType manually\n");
+
+        devVals->installType = kInstallTypeUpdate;
+        goto getID0;
+    }
+
+    if (!id0 || plist_get_node_type(id0) != PLIST_DICT){
+        reterror("[TSSR] Error: could not get BuildIdentity for installType=%s\n",devVals->isUpdateInstall ? "Update" : "Erase");
+    }
+    plist_t manifestdict = plist_dict_get_item(id0, "Manifest");
+    plist_t infodict = plist_dict_get_item(id0, "Info");
+    if (!manifestdict || plist_get_node_type(manifestdict) != PLIST_DICT){
+        reterror("[TSSR] Error: could not get manifest\n");
+    }
+    plist_t sep = plist_dict_get_item(manifestdict, "SEP");
+    plist_t virt = plist_dict_get_item(infodict, "VirtualMachineMinHostOS");
+    int is64Bit = !(!sep || plist_get_node_type(sep) != PLIST_DICT);
+    if(virt) {
+        is64Bit = plist_get_node_type(virt) == PLIST_STRING;
+    }
+    if(!is64Bit) {
+      reterror("[TSSR] failed to create cryptex tss request, 32bit device detected!\n");
+    }
+
+    if (tss_populate_cryptexvals(tssreq, id0, devVals))
+        reterror("[TSSR] failed to populate cryptex tss request\n");
+
+    *tssreqret = tssreq;
+error:
+    if (manifest) plist_free(manifest);
+    if (tssparameter) plist_free(tssparameter);
+    if (error) (void)(plist_free(tssreq)), *tssreqret = NULL;
+    return error;
+#undef reterror
+}
+
 int isManifestBufSignedForDevice(char *buildManifestBuffer, t_devicevals *devVals, t_basebandMode basebandMode, const char* server_url_string){
 #define reterror(a ...) {error(a); isSigned = -1; goto error;}
     int isSigned = 0;
     plist_t tssreq = NULL;
+    plist_t cryptextssreq = NULL;
     plist_t apticket = NULL;
     plist_t apticket2 = NULL;
     plist_t apticket3 = NULL;
-    
+    plist_t cryptexticket = NULL;
+
     if (tssrequest(&tssreq, buildManifestBuffer, devVals, basebandMode))
         reterror("[TSSR] failed to build tss request\n");
 
@@ -1255,36 +1524,45 @@ int isManifestBufSignedForDevice(char *buildManifestBuffer, t_devicevals *devVal
              * Apple Tatsu moment
              * The apple Tatsu servers are wack
             */
-            if(devVals->deviceBoard && (!strcasecmp(devVals->deviceBoard, "d83ap") || !strcasecmp(devVals->deviceBoard, "d84ap")
+            if(devVals->deviceBoard && (!strcasecmp(devVals->deviceBoard, "n51ap") || !strcasecmp(devVals->deviceBoard, "n53ap")
+                                        || !strcasecmp(devVals->deviceBoard, "n56ap") || !strcasecmp(devVals->deviceBoard, "n61ap")
                                         || !strcasecmp(devVals->deviceBoard, "d73ap") || !strcasecmp(devVals->deviceBoard, "d74ap")
                                         || !strcasecmp(devVals->deviceBoard, "d37ap") || !strcasecmp(devVals->deviceBoard, "d38ap")
-                                        || !strcasecmp(devVals->deviceBoard, "n51ap") || !strcasecmp(devVals->deviceBoard, "n53ap")
-                                        || !strcasecmp(devVals->deviceBoard, "n56ap") || !strcasecmp(devVals->deviceBoard, "n61ap")
-                                        || !strcasecmp(devVals->deviceBoard, "j71ap") || !strcasecmp(devVals->deviceBoard, "j72ap")
-                                        || !strcasecmp(devVals->deviceBoard, "j73ap") || !strcasecmp(devVals->deviceBoard, "j81ap")
-                                        || !strcasecmp(devVals->deviceBoard, "j82ap") || !strcasecmp(devVals->deviceBoard, "n102ap")
+                                        || !strcasecmp(devVals->deviceBoard, "d83ap") || !strcasecmp(devVals->deviceBoard, "d84ap")
+                                        || !strcasecmp(devVals->deviceBoard, "d93ap") || !strcasecmp(devVals->deviceBoard, "d94ap")
+                                        || !strcasecmp(devVals->deviceBoard, "d47ap") || !strcasecmp(devVals->deviceBoard, "d48ap")
+                                        || !strcasecmp(devVals->deviceBoard, "n102ap") || !strcasecmp(devVals->deviceBoard, "j71ap")
+                                        || !strcasecmp(devVals->deviceBoard, "j72ap") || !strcasecmp(devVals->deviceBoard, "j73ap")
                                         || !strcasecmp(devVals->deviceBoard, "j85ap") || !strcasecmp(devVals->deviceBoard, "j86ap")
                                         || !strcasecmp(devVals->deviceBoard, "j87ap") || !strcasecmp(devVals->deviceBoard, "j85map")
                                         || !strcasecmp(devVals->deviceBoard, "j86map") || !strcasecmp(devVals->deviceBoard, "j87map")
                                         || !strcasecmp(devVals->deviceBoard, "j96ap") || !strcasecmp(devVals->deviceBoard, "j97ap")
-                                        || !strcasecmp(devVals->deviceBoard, "n112ap") || !strcasecmp(devVals->deviceBoard, "j42dap")
-                                        || !strcasecmp(devVals->deviceBoard, "j105aap") || !strcasecmp(devVals->deviceBoard, "j305ap"))) {
+                                        || !strcasecmp(devVals->deviceBoard, "j81ap") || !strcasecmp(devVals->deviceBoard, "j82ap")
+                                        || !strcasecmp(devVals->deviceBoard, "j717ap") || !strcasecmp(devVals->deviceBoard, "j718ap")
+                                        || !strcasecmp(devVals->deviceBoard, "j720ap") || !strcasecmp(devVals->deviceBoard, "j721ap")
+                                        || !strcasecmp(devVals->deviceBoard, "j42dap") || !strcasecmp(devVals->deviceBoard, "j105aap")
+                                        || !strcasecmp(devVals->deviceBoard, "j305ap") || !strcasecmp(devVals->deviceBoard, "j255ap"))) {
                 save_apticket3 = false;
             }
-            if(devVals->deviceModel && (!strcasecmp(devVals->deviceModel, "iPhone16,1") || !strcasecmp(devVals->deviceModel, "iPhone16,2")
+            if(devVals->deviceModel && (!strcasecmp(devVals->deviceModel, "iPhone6,1") || !strcasecmp(devVals->deviceModel, "iPhone6,2")
+                                        || !strcasecmp(devVals->deviceModel, "iPhone7,1") || !strcasecmp(devVals->deviceModel, "iPhone7,2")
                                         || !strcasecmp(devVals->deviceModel, "iPhone15,2") || !strcasecmp(devVals->deviceModel, "iPhone15,3")
                                         || !strcasecmp(devVals->deviceModel, "iPhone15,4") || !strcasecmp(devVals->deviceModel, "iPhone15,5")
-                                        || !strcasecmp(devVals->deviceModel, "iPhone6,1") || !strcasecmp(devVals->deviceModel, "iPhone6,2")
-                                        || !strcasecmp(devVals->deviceModel, "iPhone7,1") || !strcasecmp(devVals->deviceModel, "iPhone7,2")
-                                        || !strcasecmp(devVals->deviceModel, "iPad4,1") || !strcasecmp(devVals->deviceModel, "iPad4,2")
-                                        || !strcasecmp(devVals->deviceModel, "iPad4,3") || !strcasecmp(devVals->deviceModel, "iPad5,3")
-                                        || !strcasecmp(devVals->deviceModel, "iPad5,4") || !strcasecmp(devVals->deviceModel, "iPod7,1")
+                                        || !strcasecmp(devVals->deviceModel, "iPhone16,1") || !strcasecmp(devVals->deviceModel, "iPhone16,2")
+                                        || !strcasecmp(devVals->deviceModel, "iPhone17,1") || !strcasecmp(devVals->deviceModel, "iPhone17,2")
+                                        || !strcasecmp(devVals->deviceModel, "iPhone17,3") || !strcasecmp(devVals->deviceModel, "iPhone17,4")
+                                        || !strcasecmp(devVals->deviceModel, "iPod7,1") || !strcasecmp(devVals->deviceModel, "iPad4,1")
+                                        || !strcasecmp(devVals->deviceModel, "iPad4,2") || !strcasecmp(devVals->deviceModel, "iPad4,3")
                                         || !strcasecmp(devVals->deviceModel, "iPad4,4") || !strcasecmp(devVals->deviceModel, "iPad4,5")
                                         || !strcasecmp(devVals->deviceModel, "iPad4,6") || !strcasecmp(devVals->deviceModel, "iPad4,7")
                                         || !strcasecmp(devVals->deviceModel, "iPad4,8") || !strcasecmp(devVals->deviceModel, "iPad4,9")
                                         || !strcasecmp(devVals->deviceModel, "iPad5,1") || !strcasecmp(devVals->deviceModel, "iPad5,2")
-                                        || !strcasecmp(devVals->deviceModel, "iPod9,1") || !strcasecmp(devVals->deviceModel, "Appletv5,3")
-                                        || !strcasecmp(devVals->deviceModel, "Appletv6,2") || !strcasecmp(devVals->deviceModel, "Appletv11,1"))) {
+                                        || !strcasecmp(devVals->deviceModel, "iPad5,3") || !strcasecmp(devVals->deviceModel, "iPad5,4")
+                                        || !strcasecmp(devVals->deviceModel, "iPad16,1") || !strcasecmp(devVals->deviceModel, "iPad16,2")
+                                        || !strcasecmp(devVals->deviceModel, "iPad16,3") || !strcasecmp(devVals->deviceModel, "iPad16,4")
+                                        || !strcasecmp(devVals->deviceModel, "iPad16,5") || !strcasecmp(devVals->deviceModel, "iPad16,6")
+                                        || !strcasecmp(devVals->deviceModel, "Appletv5,3") || !strcasecmp(devVals->deviceModel, "Appletv6,2")
+                                        || !strcasecmp(devVals->deviceModel, "Appletv11,1") || !strcasecmp(devVals->deviceModel, "Appletv14,1"))) {
                 save_apticket3 = false;
             }
             if(save_apticket3 && !tssrequest(&tssreq2, buildManifestBuffer, devVals, kBasebandModeWithoutBaseband)) {
@@ -1297,7 +1575,16 @@ int isManifestBufSignedForDevice(char *buildManifestBuffer, t_devicevals *devVal
             devVals->apnonce = apnonce;
             devVals->installType = installType;
         }
-            
+        if(devVals->cryptexnonce && devVals->parsedCryptexnonceLen) {
+          info("[TSSC] Also requesting Cryptex1 Ticket\n");
+          if(!cryptextssrequest(&cryptextssreq, buildManifestBuffer, devVals)) {
+          cryptexticket = tss_request_send(cryptextssreq, server_url_string);
+          if (print_tss_response) {
+            debug_plist2(cryptexticket);
+          }
+        }
+        }
+
         plist_t manifest = 0;
         plist_from_xml(buildManifestBuffer, (unsigned)strlen(buildManifestBuffer), &manifest);
         plist_t build = plist_dict_get_item(manifest, "ProductBuildVersion");
@@ -1319,6 +1606,10 @@ int isManifestBufSignedForDevice(char *buildManifestBuffer, t_devicevals *devVal
         }
         if (apticket3) {
             plist_dict_set_item(apticket, "noNonce", apticket3);
+        }
+        if (cryptexticket) {
+            plist_dict_set_item(apticket, "cryptexTicket", cryptexticket);
+            plist_dict_set_item(apticket, "cryptexSeed", plist_new_string(devVals->cryptexseed));
         }
         
         uint32_t size = 0;
